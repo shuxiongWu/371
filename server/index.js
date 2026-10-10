@@ -176,7 +176,7 @@ async function handleStatic(req, res, pathname) {
   }
 }
 
-const server = createServer(async (req, res) => {
+async function onRequest(req, res) {
   try {
     const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
     if (url.pathname.startsWith('/api/')) {
@@ -192,7 +192,10 @@ const server = createServer(async (req, res) => {
     const status = error.status || 500;
     sendJson(res, status, { error: status === 500 ? '服务器出错了' : error.message });
   }
-});
+}
+
+const server = createServer(onRequest);
+const server6 = createServer(onRequest);
 
 function broadcast() {
   for (const [userId, ws] of sockets) {
@@ -212,7 +215,30 @@ function sendError(ws, error) {
   ws.send(JSON.stringify({ type: 'error', error: known ? error.message : '操作失败' }));
 }
 
-const wss = new WebSocketServer({ server, path: '/ws' });
+const wss = new WebSocketServer({ noServer: true });
+
+function attachWebSocket(httpServer) {
+  httpServer.on('upgrade', (req, socket, head) => {
+    let pathname = '/';
+    try {
+      pathname = new URL(req.url || '/', 'http://localhost').pathname;
+    } catch {
+      socket.destroy();
+      return;
+    }
+    if (pathname !== '/ws') {
+      socket.destroy();
+      return;
+    }
+    wss.handleUpgrade(req, socket, head, (ws) => {
+      wss.emit('connection', ws, req);
+    });
+  });
+}
+
+attachWebSocket(server);
+attachWebSocket(server6);
+
 wss.on('connection', (ws, req) => {
   let user = null;
   try {
@@ -258,7 +284,12 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-// localhost 在这台机器上先解析到 ::1。只绑 0.0.0.0 时，浏览器会收到连接被拒绝。
-server.listen({ port: PORT, host: '::', ipv6Only: false }, () => {
-  console.log(`青毡已打开 http://localhost:${PORT}`);
-});
+let ready = 0;
+function announce() {
+  ready += 1;
+  if (ready === 1) console.log(`青毡已打开 http://localhost:${PORT}`);
+}
+
+// 同时监听 IPv4 和 IPv6。只绑其中一边时，浏览器或端口转发访问 localhost 会得到 -102。
+server.listen({ port: PORT, host: '0.0.0.0' }, announce);
+server6.listen({ port: PORT, host: '::', ipv6Only: true }, announce);
