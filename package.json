@@ -1,0 +1,17 @@
+{
+  "name": "qingzhan",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "青毡 — 娱乐用无限制德州扑克",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server/index.js",
+    "test": "node --disable-warning=ExperimentalWarning --test"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
+  }
+}
