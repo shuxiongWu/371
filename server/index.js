@@ -258,6 +258,7 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-server.listen(PORT, '0.0.0.0', () => {
+// localhost 在这台机器上先解析到 ::1。只绑 0.0.0.0 时，浏览器会收到连接被拒绝。
+server.listen({ port: PORT, host: '::', ipv6Only: false }, () => {
   console.log(`青毡已打开 http://localhost:${PORT}`);
 });
